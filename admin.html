@@ -299,6 +299,43 @@
     </div>
   </div>
 
+  <!-- ARAÇ DÜZENLEME MODALI -->
+  <div id="editVehicleModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-3xl p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-blue-600"></i>
+          Araç Bilgilerini Düzenle
+        </h3>
+        <button onclick="closeEditVehicleModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <input type="hidden" id="editVehicleIndex">
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase block mb-1">Araç Plakası *</label>
+        <input type="text" id="editVehiclePlate" placeholder="Örn: 16 ABC 101" class="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl uppercase font-mono font-bold focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase block mb-1">Marka / Model</label>
+        <input type="text" id="editVehicleBrand" placeholder="Örn: Ford Courier" class="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase block mb-1">Güncel Kilometre (Sayaç)</label>
+        <input type="number" id="editVehicleKm" placeholder="Örn: 145000" class="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl font-mono focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div class="flex gap-2 justify-end pt-2">
+        <button type="button" onclick="closeEditVehicleModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">İptal</button>
+        <button type="button" onclick="saveEditedVehicle()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow flex items-center gap-2">
+          <i class="fa-solid fa-check"></i> Değişiklikleri Kaydet
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // VARSAYILAN ARAÇLAR
     const DEFAULT_VEHICLES = [
@@ -653,7 +690,7 @@
 
       allVehicles.forEach((v, idx) => {
         const item = document.createElement('div');
-        item.className = 'py-3 flex items-center justify-between text-xs';
+        item.className = 'py-3 flex items-center justify-between text-xs hover:bg-slate-50/70 px-2 rounded-xl transition-colors';
         item.innerHTML = `
           <div class="flex items-center gap-3">
             <span class="font-mono font-black text-sm bg-slate-900 text-white px-2.5 py-1 rounded-lg">${v.plate}</span>
@@ -662,12 +699,64 @@
               <div class="text-[11px] text-slate-500">Son KM: ${v.last_km ? v.last_km.toLocaleString('tr-TR') : '-'}</div>
             </div>
           </div>
-          <button onclick="deleteVehicle(${idx})" class="text-slate-400 hover:text-red-600 transition-colors" title="Aracı Kaldır">
-            <i class="fa-solid fa-trash-can"></i>
-          </button>
+          <div class="flex items-center gap-1.5">
+            <button onclick="openEditVehicleModal(${idx})" class="p-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95" title="Aracı Düzenle">
+              <i class="fa-solid fa-pen-to-square"></i> Düzenle
+            </button>
+            <button onclick="deleteVehicle(${idx})" class="p-1.5 px-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95" title="Aracı Kaldır">
+              <i class="fa-solid fa-trash-can"></i> Sil
+            </button>
+          </div>
         `;
         container.appendChild(item);
       });
+    }
+
+    function openEditVehicleModal(idx) {
+      const v = allVehicles[idx];
+      if (!v) return;
+      document.getElementById('editVehicleIndex').value = idx;
+      document.getElementById('editVehiclePlate').value = v.plate || '';
+      document.getElementById('editVehicleBrand').value = v.brand_model || '';
+      document.getElementById('editVehicleKm').value = v.last_km || '';
+      document.getElementById('editVehicleModal').classList.remove('hidden');
+    }
+
+    function closeEditVehicleModal() {
+      document.getElementById('editVehicleModal').classList.add('hidden');
+    }
+
+    function saveEditedVehicle() {
+      const idx = parseInt(document.getElementById('editVehicleIndex').value);
+      if (isNaN(idx) || !allVehicles[idx]) return;
+
+      const plate = document.getElementById('editVehiclePlate').value.trim().toUpperCase();
+      const brand = document.getElementById('editVehicleBrand').value.trim();
+      const km = document.getElementById('editVehicleKm').value;
+
+      if (!plate) return alert('Lütfen araç plakasını giriniz.');
+
+      // Başka bir araç aynı plakaya sahip mi kontrolü
+      const exists = allVehicles.some((v, i) => i !== idx && v.plate === plate);
+      if (exists) return alert('Bu plaka başka bir araçta zaten kayıtlı.');
+
+      const oldPlate = allVehicles[idx].plate;
+
+      allVehicles[idx].plate = plate;
+      allVehicles[idx].brand_model = brand || 'Şirket Aracı';
+      allVehicles[idx].last_km = km ? parseInt(km) : 0;
+
+      // Eğer plaka değiştiyse, ilişkili seyahatlerdeki plakayı da senkronize et
+      if (oldPlate && oldPlate !== plate) {
+        allTrips.forEach(t => {
+          if (t.plate === oldPlate) t.plate = plate;
+        });
+        saveTrips();
+      }
+
+      saveVehicles();
+      renderAll();
+      closeEditVehicleModal();
     }
 
     function addNewVehicle() {

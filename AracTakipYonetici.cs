@@ -77,7 +77,19 @@ namespace AracTakipYonetici
             this.BackColor = Color.FromArgb(15, 23, 42); // slate-900
             this.ForeColor = Color.White;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
-            this.Icon = SystemIcons.Application;
+
+            try
+            {
+                string iconPath = Path.Combine(appDir, "app_icon.ico");
+                if (File.Exists(iconPath))
+                    this.Icon = new Icon(iconPath);
+                else
+                    this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            }
+            catch
+            {
+                this.Icon = SystemIcons.Application;
+            }
 
             // HEADER PANEL
             Panel pnlHeader = new Panel
@@ -228,7 +240,7 @@ namespace AracTakipYonetici
             trayIcon = new NotifyIcon
             {
                 Text = "Araç Takip Yönetici Masası",
-                Icon = SystemIcons.Application,
+                Icon = this.Icon,
                 ContextMenuStrip = trayMenu,
                 Visible = true
             };

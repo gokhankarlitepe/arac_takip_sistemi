@@ -46,7 +46,20 @@ namespace AracTakipSetup
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(248, 250, 252);
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
-            this.Icon = SystemIcons.Application;
+
+            try
+            {
+                string sourceDir = AppDomain.CurrentDomain.BaseDirectory;
+                string iconPath = Path.Combine(sourceDir, "app_icon.ico");
+                if (File.Exists(iconPath))
+                    this.Icon = new Icon(iconPath);
+                else
+                    this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            }
+            catch
+            {
+                this.Icon = SystemIcons.Application;
+            }
 
             // HEADER
             Panel pnlHeader = new Panel
@@ -253,7 +266,9 @@ namespace AracTakipSetup
                     "qrcode.min.js",
                     "index.html",
                     "nizamiye_form.html",
-                    "NizamiyeGuvenlik.apk"
+                    "NizamiyeGuvenlik.apk",
+                    "app_icon.ico",
+                    "app_icon.png"
                 };
 
                 foreach (string file in filesToCopy)
@@ -272,13 +287,14 @@ namespace AracTakipSetup
                 Application.DoEvents();
 
                 string exePath = Path.Combine(targetDir, "AracTakipYonetici.exe");
+                string iconPath = Path.Combine(targetDir, "app_icon.ico");
 
                 // Masaüstü Kısayolu
                 if (chkDesktopShortcut.Checked && File.Exists(exePath))
                 {
                     string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                     string shortcutPath = Path.Combine(desktopDir, "Araç Takip Yönetici Paneli.lnk");
-                    CreateShortcut(shortcutPath, exePath, targetDir, "Araç Takip & Yönetim Masası");
+                    CreateShortcut(shortcutPath, exePath, targetDir, "Araç Takip & Yönetim Masası", iconPath);
                 }
 
                 // Başlat Menüsü Kısayolu
@@ -289,7 +305,7 @@ namespace AracTakipSetup
                     if (!Directory.Exists(appStartMenuDir)) Directory.CreateDirectory(appStartMenuDir);
 
                     string smShortcut = Path.Combine(appStartMenuDir, "Araç Takip Yönetici Paneli.lnk");
-                    CreateShortcut(smShortcut, exePath, targetDir, "Araç Takip & Yönetim Masası");
+                    CreateShortcut(smShortcut, exePath, targetDir, "Araç Takip & Yönetim Masası", iconPath);
                 }
                 catch { }
 
@@ -324,7 +340,7 @@ namespace AracTakipSetup
             }
         }
 
-        private void CreateShortcut(string shortcutPath, string targetPath, string workingDir, string description)
+        private void CreateShortcut(string shortcutPath, string targetPath, string workingDir, string description, string iconPath = null)
         {
             try
             {
@@ -336,6 +352,14 @@ namespace AracTakipSetup
                 shortcut.TargetPath = targetPath;
                 shortcut.WorkingDirectory = workingDir;
                 shortcut.Description = description;
+                if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
+                {
+                    shortcut.IconLocation = iconPath + ",0";
+                }
+                else
+                {
+                    shortcut.IconLocation = targetPath + ",0";
+                }
                 shortcut.Save();
             }
             catch (Exception ex)

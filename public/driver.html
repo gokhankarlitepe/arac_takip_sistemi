@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Araç Çıkış & Giriş Bildirim Formu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    /* Türk Plaka Görünümü */
+    .plate-badge {
+      display: inline-flex;
+      align-items: center;
+      background: #ffffff;
+      color: #0f172a;
+      border: 3px solid #0f172a;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    }
+    .plate-flag {
+      background: #003399;
+      color: #ffffff;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 11px;
+      line-height: 1;
+    }
+    .plate-number {
+      padding: 6px 16px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-12">
+
+  <!-- Üst Bilgi Başlığı -->
+  <header class="bg-slate-950 border-b border-slate-800 px-4 py-3 sticky top-0 z-20 flex items-center justify-between">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-md shadow-emerald-500/20">
+        <i class="fa-solid fa-car-side"></i>
+      </div>
+      <div>
+        <h1 class="text-xs font-black tracking-wider text-white uppercase">Nizamiye Araç Takip</h1>
+        <p class="text-[10px] text-emerald-400 font-bold">WhatsApp Güvenlik Bildirimi</p>
+      </div>
+    </div>
+    <div class="text-right">
+      <span id="liveTime" class="text-xs bg-slate-800 px-2 py-0.5 rounded text-emerald-400 font-mono font-bold">--:--</span>
+      <div id="liveDate" class="text-[10px] text-slate-400 mt-0.5">--.--.----</div>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto px-4 mt-3 space-y-3.5">
+
+    <!-- Araç Plaka Kartı -->
+    <div class="text-center py-2">
+      <div class="plate-badge">
+        <div class="plate-flag">
+          <span>TR</span>
+        </div>
+        <div id="displayPlate" class="plate-number">PLAKA BEKLENİYOR</div>
+      </div>
+      <div class="text-[11px] text-slate-400 mt-1.5 flex items-center justify-center gap-2">
+        <span id="txtModeInfo" class="font-semibold text-emerald-400">Araç Çıkış İşlemi</span>
+        <span>•</span>
+        <button type="button" onclick="editPlatePrompt()" class="text-blue-400 hover:text-blue-300 underline text-[11px]">Plaka Değiştir</button>
+      </div>
+    </div>
+
+    <!-- Otomatik Tanımlama Bildirimi (Şoför Girişi Gerekmez) -->
+    <div class="bg-emerald-950/40 border border-emerald-800/60 rounded-2xl p-3 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-mobile-screen-button text-sm"></i>
+      </div>
+      <div class="text-xs leading-snug">
+        <span class="text-emerald-300 font-bold">Otomatik Şoför Tanımlama:</span>
+        <p class="text-slate-400 text-[11px] mt-0.5">
+          Ad veya numara yazmanıza gerek yoktur. WhatsApp üzerinden gönderildiğinde telefon numaranız güvenlik sistemine otomatik işlenir.
+        </p>
+      </div>
+    </div>
+
+    <!-- Güvenlik Numarası Gösterimi -->
+    <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-2.5 flex items-center justify-between text-xs">
+      <div class="flex items-center gap-2">
+        <i class="fa-brands fa-whatsapp text-emerald-400 text-lg"></i>
+        <span class="text-slate-300">İletilecek Güvenlik: <strong id="lblGuvenlikPhone" class="text-white font-mono">Tanımlanıyor...</strong></span>
+      </div>
+      <button type="button" onclick="changeGuvenlikPhone()" class="text-emerald-400 hover:text-emerald-300 font-bold text-[11px] underline">
+        Değiştir
+      </button>
+    </div>
+
+    <!-- Sekmeler: 1. ÇIKIŞ vs 2. GİRİŞ -->
+    <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+      <button type="button" id="tabBtnDepart" onclick="switchMode('depart')" class="py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-emerald-600 text-white shadow-lg shadow-emerald-900/30">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        <span>1. ARAÇ ÇIKIŞI</span>
+      </button>
+      <button type="button" id="tabBtnReturn" onclick="switchMode('return')" class="py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-transparent text-slate-400 hover:text-white">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        <span>2. FABRİKAYA GİRİŞ</span>
+      </button>
+    </div>
+
+    <!-- FORM KARTI -->
+    <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl">
+
+      <!-- ÇIKIŞ ALANLARI -->
+      <div id="sectionDepartFields" class="space-y-4">
+        <!-- Gidiş Sebebi -->
+        <div>
+          <label class="text-xs font-bold text-slate-300 uppercase block mb-1.5">
+            <i class="fa-solid fa-location-dot text-emerald-400 mr-1"></i> Gidiş Sebebi / Hedef *
+          </label>
+          <!-- Hızlı Seçim Butonları -->
+          <div class="flex flex-wrap gap-1.5 mb-2">
+            <button type="button" onclick="setDest('Küçük Sanayi')" class="text-[11px] bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-200 font-semibold active:scale-95 transition-all">Küçük Sanayi</button>
+            <button type="button" onclick="setDest('Organize Sanayi')" class="text-[11px] bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-200 font-semibold active:scale-95 transition-all">Organize Sanayi</button>
+            <button type="button" onclick="setDest('Depo / Sevkiyat')" class="text-[11px] bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-200 font-semibold active:scale-95 transition-all">Depo / Sevkiyat</button>
+            <button type="button" onclick="setDest('Banka / Resmi İşler')" class="text-[11px] bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-200 font-semibold active:scale-95 transition-all">Banka</button>
+            <button type="button" onclick="setDest('Acil Parça Temini')" class="text-[11px] bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-200 font-semibold active:scale-95 transition-all">Acil Parça</button>
+          </div>
+          <input type="text" id="inputDest" placeholder="Nereye gidildiğini yazınız..." class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <!-- Çıkış Kilometresi -->
+        <div>
+          <label class="text-xs font-bold text-slate-300 uppercase block mb-1">
+            <i class="fa-solid fa-gauge-high text-emerald-400 mr-1"></i> Çıkış Kilometresi (Sayaç) *
+          </label>
+          <div class="relative">
+            <input type="number" id="inputDepartKm" placeholder="Mevcut KM Sayacını Yazınız" class="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl text-xl font-mono font-bold text-white focus:outline-none focus:border-emerald-500">
+            <span class="absolute right-4 top-3.5 text-xs font-bold text-slate-500">KM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DÖNÜŞ (GİRİŞ) ALANLARI -->
+      <div id="sectionReturnFields" class="space-y-4 hidden">
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-2.5 text-xs text-amber-300">
+          <i class="fa-solid fa-flag-checkered text-lg"></i>
+          <span>Fabrikaya dönüş yaptığınızda güncel kilometreyi girip güvenliğe iletiniz.</span>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-amber-400 uppercase block mb-1">
+            <i class="fa-solid fa-gauge-high text-amber-400 mr-1"></i> Dönüş Kilometresi (Sayaç) *
+          </label>
+          <div class="relative">
+            <input type="number" id="inputReturnKm" placeholder="Dönüşteki KM Sayacını Yazınız" class="w-full p-3.5 bg-slate-900 border-2 border-amber-500/60 rounded-xl text-xl font-mono font-black text-white focus:outline-none focus:border-amber-400">
+            <span class="absolute right-4 top-3.5 text-xs font-bold text-amber-400">KM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- İsteğe Bağlı İsim Alanı (Katlanabilir) -->
+      <details class="text-xs text-slate-400 border-t border-slate-800/80 pt-2">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-300 select-none">
+          + İsteğe bağlı şoför adı belirt (Zorunlu değildir)
+        </summary>
+        <div class="mt-2.5 space-y-2">
+          <input type="text" id="inputOptDriverName" placeholder="Ad Soyad (İsteğe bağlı)" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500">
+        </div>
+      </details>
+
+      <!-- GÖNDER BUTONU -->
+      <button type="button" id="btnSubmit" onclick="sendWhatsAppMessage()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 rounded-2xl text-base shadow-xl shadow-emerald-900/40 flex items-center justify-center gap-2.5 active:scale-95 transition-all">
+        <i class="fa-brands fa-whatsapp text-2xl"></i>
+        <span id="btnSubmitText">GÜVENLİĞE ÇIKIŞI İLET</span>
+      </button>
+
+      <p class="text-[11px] text-slate-400 text-center leading-relaxed">
+        WhatsApp ile güvenliğe gönderilen mesaj, güvenlik telefonundaki uygulama tarafından <strong>otomatik olarak sisteme işlenir</strong>.
+      </p>
+
+    </div>
+
+  </main>
+
+  <script>
+    // Canlı Saat & Tarih
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('liveTime').innerText = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('liveDate').innerText = now.toLocaleDateString('tr-TR');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // URL Parametreleri
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentPlate = (urlParams.get('p') || urlParams.get('plaka') || '').trim().toUpperCase();
+    let guvenlikPhone = (urlParams.get('tel') || urlParams.get('phone') || localStorage.getItem('nizamiye_guvenlik_phone') || '905320000000').trim().replace(/\D/g, '');
+
+    // Plaka Kontrolü
+    if (!currentPlate) {
+      currentPlate = localStorage.getItem('nizamiye_last_plate') || '';
+      if (!currentPlate) {
+        currentPlate = prompt('Lütfen araç plakasını giriniz (Örn: 16 ABC 101):', '16 ABC 101') || '16 ABC 101';
+      }
+    }
+    setPlate(currentPlate);
+
+    // Güvenlik Telefonu
+    updatePhoneLabel();
+
+    function updatePhoneLabel() {
+      const lbl = document.getElementById('lblGuvenlikPhone');
+      lbl.innerText = guvenlikPhone ? ('+' + guvenlikPhone) : 'Tanımlanmadı';
+    }
+
+    function changeGuvenlikPhone() {
+      const val = prompt('Nizamiye Güvenliğinin WhatsApp Telefon Numarasını giriniz (Örn: 905XXXXXXXXX):', guvenlikPhone);
+      if (val !== null && val.trim()) {
+        let clean = val.replace(/\D/g, '');
+        if (clean.length === 10) clean = '90' + clean;
+        guvenlikPhone = clean;
+        localStorage.setItem('nizamiye_guvenlik_phone', guvenlikPhone);
+        updatePhoneLabel();
+      }
+    }
+
+    function setPlate(plate) {
+      currentPlate = plate.trim().toUpperCase();
+      localStorage.setItem('nizamiye_last_plate', currentPlate);
+      document.getElementById('displayPlate').innerText = currentPlate;
+    }
+
+    function editPlatePrompt() {
+      const p = prompt('Araç Plakası:', currentPlate);
+      if (p !== null && p.trim()) setPlate(p);
+    }
+
+    function setDest(val) {
+      document.getElementById('inputDest').value = val;
+    }
+
+    // Mod Değiştir (Çıkış vs Dönüş)
+    let currentMode = 'depart';
+
+    function switchMode(mode) {
+      currentMode = mode;
+      const btnDep = document.getElementById('tabBtnDepart');
+      const btnRet = document.getElementById('tabBtnReturn');
+      const secDep = document.getElementById('sectionDepartFields');
+      const secRet = document.getElementById('sectionReturnFields');
+      const btnSubmit = document.getElementById('btnSubmit');
+      const btnSubmitText = document.getElementById('btnSubmitText');
+      const txtMode = document.getElementById('txtModeInfo');
+
+      if (mode === 'depart') {
+        btnDep.className = 'py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-emerald-600 text-white shadow-lg shadow-emerald-900/30';
+        btnRet.className = 'py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-transparent text-slate-400 hover:text-white';
+        secDep.classList.remove('hidden');
+        secRet.classList.add('hidden');
+        btnSubmit.className = 'w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 rounded-2xl text-base shadow-xl shadow-emerald-900/40 flex items-center justify-center gap-2.5 active:scale-95 transition-all';
+        btnSubmitText.innerText = 'GÜVENLİĞE ÇIKIŞI İLET';
+        txtMode.innerText = 'Araç Çıkış İşlemi';
+      } else {
+        btnRet.className = 'py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-amber-600 text-white shadow-lg shadow-amber-900/30';
+        btnDep.className = 'py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-transparent text-slate-400 hover:text-white';
+        secRet.classList.remove('hidden');
+        secDep.classList.add('hidden');
+        btnSubmit.className = 'w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-black py-4 rounded-2xl text-base shadow-xl shadow-amber-900/40 flex items-center justify-center gap-2.5 active:scale-95 transition-all';
+        btnSubmitText.innerText = 'GÜVENLİĞE DÖNÜŞÜ (GİRİŞ) İLET';
+        txtMode.innerText = 'Fabrikaya Giriş / Dönüş';
+      }
+    }
+
+    // WHATSAPP İLE GÖNDER
+    function sendWhatsAppMessage() {
+      if (!currentPlate) return alert('Lütfen araç plakasını belirtiniz.');
+      if (!guvenlikPhone) return alert('Lütfen güvenlik telefon numarasını giriniz.');
+
+      const optDriver = (document.getElementById('inputOptDriverName')?.value || '').trim();
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = now.toLocaleDateString('tr-TR');
+
+      let msg = '';
+
+      if (currentMode === 'depart') {
+        const dest = document.getElementById('inputDest').value.trim();
+        const km = document.getElementById('inputDepartKm').value.trim();
+
+        if (!dest) return alert('Lütfen gidiş sebebinizi / hedefinizi seçiniz veya yazınız.');
+        if (!km) return alert('Lütfen aracın mevcut kilometre sayacını yazınız.');
+
+        // Son çıkış KM bilgisini telefonda sakla (dönüşte karşılaştırmak için)
+        localStorage.setItem('nizamiye_depkm_' + currentPlate, km);
+
+        msg += `🚗 *NİZAMİYE ARAÇ ÇIKIŞI*\n`;
+        msg += `─────────────────────\n`;
+        msg += `📋 *Plaka:* ${currentPlate}\n`;
+        if (optDriver) {
+          msg += `👤 *Sürücü:* ${optDriver}\n`;
+        }
+        msg += `📍 *Hedef:* ${dest}\n`;
+        msg += `⚡ *KM Sayaç:* ${km} KM\n`;
+        msg += `🕒 *Saat:* ${timeStr} (${dateStr})\n`;
+        msg += `─────────────────────\n`;
+        msg += `*(Güvenlik telefonuna otomatik kaydedilir)*`;
+
+      } else {
+        // GİRİŞ / DÖNÜŞ İŞLEMİ
+        const km = document.getElementById('inputReturnKm').value.trim();
+        if (!km) return alert('Lütfen dönüş kilometresini giriniz.');
+
+        const depKm = localStorage.getItem('nizamiye_depkm_' + currentPlate);
+        let kmDiffText = '';
+        if (depKm && parseInt(km) >= parseInt(depKm)) {
+          kmDiffText = ` (+${parseInt(km) - parseInt(depKm)} KM)`;
+        }
+
+        msg += `🏁 *NİZAMİYE ARAÇ GİRİŞİ*\n`;
+        msg += `─────────────────────\n`;
+        msg += `📋 *Plaka:* ${currentPlate}\n`;
+        if (optDriver) {
+          msg += `👤 *Sürücü:* ${optDriver}\n`;
+        }
+        msg += `⚡ *Dönüş KM:* ${km} KM${kmDiffText}\n`;
+        msg += `🕒 *Saat:* ${timeStr} (${dateStr})\n`;
+        msg += `─────────────────────\n`;
+        msg += `*(Güvenlik telefonuna otomatik kaydedilir)*`;
+      }
+
+      // WhatsApp URL oluştur ve aç
+      const waUrl = `https://api.whatsapp.com/send?phone=${guvenlikPhone}&text=${encodeURIComponent(msg)}`;
+      window.location.href = waUrl;
+    }
+  </script>
+</body>
+</html>

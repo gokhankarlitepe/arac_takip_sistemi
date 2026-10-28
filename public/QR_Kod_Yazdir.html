@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Araç QR Kod Yazdırma & Etiket Sayfası</title>
+  <script src="qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 20px;
+    }
+
+    /* Kontrol Paneli (Yazdırmada Gizlenir) */
+    .no-print {
+      max-width: 900px;
+      margin: 0 auto 25px auto;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .panel-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #1e293b;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-sub {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 13px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      outline: none;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    }
+    textarea {
+      font-family: monospace;
+      font-size: 13px;
+      resize: vertical;
+      height: 90px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 800;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-print {
+      background: #059669;
+      color: #ffffff;
+    }
+    .btn-print:hover { background: #047857; }
+
+    /* Etiket Sayfa Izgarası */
+    .print-sheet {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    /* Tekil Araç Kartı / Çıkartması */
+    .qr-card {
+      background: #ffffff;
+      border: 2px dashed #94a3b8;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      page-break-inside: avoid;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 380px;
+    }
+
+    .card-org {
+      font-size: 11px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    /* Plaka Stili */
+    .plate-box {
+      display: inline-flex;
+      align-items: center;
+      border: 3px solid #0f172a;
+      border-radius: 8px;
+      background: #ffffff;
+      overflow: hidden;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .plate-tr {
+      background: #003399;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 6px 8px;
+      line-height: 1;
+    }
+    .plate-txt {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 20px;
+      font-weight: 900;
+      color: #0f172a;
+      padding: 4px 14px;
+      letter-spacing: 2px;
+    }
+
+    .qr-wrap {
+      background: #ffffff;
+      padding: 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+    .qr-wrap canvas, .qr-wrap img {
+      display: block;
+      margin: 0 auto;
+    }
+
+    .card-footer {
+      font-size: 11px;
+      color: #334155;
+      font-weight: 600;
+      line-height: 1.4;
+      max-width: 280px;
+    }
+    .card-footer strong {
+      color: #059669;
+    }
+
+    /* Yazdırma Modu */
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-sheet {
+        max-width: 100%;
+        gap: 15px;
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .qr-card {
+        border: 2px solid #000000;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- KONTROL VE AYAR PANELİ (SADECE EKRANDA GÖRÜNÜR) -->
+  <div class="no-print">
+    <div class="panel-title">
+      🚗 Araç QR Kod Üretici & Yazdırma Paneli
+    </div>
+    <div class="panel-sub">
+      Bu sayfa üzerinden herhangi bir sunucuya ihtiyaç duymadan araçlarınız için QR kod etiketleri üretebilirsiniz.<br>
+      Şoför araçtaki QR kodu okuttuğunda doğrudan telefonunda form açılır ve güvenliğin WhatsApp numarasına bildirimi iletir.
+    </div>
+
+    <div class="form-grid">
+      <div>
+        <label>Formun Bulunduğu İnternet Adresi (URL):</label>
+        <input type="text" id="cfgFormUrl" value="https://gokhankarlitepe.github.io/arac_takip_sistemi/nizamiye_form.html" placeholder="Örn: https://siteniz.com/nizamiye_form.html">
+        <span style="font-size:11px; color:#64748b; margin-top:4px; display:block;">
+          💡 nizamiye_form.html dosyasını yüklediğiniz web adresi (GitHub Pages, Vercel, vb.).
+        </span>
+      </div>
+
+      <div>
+        <label>Güvenliğin WhatsApp Telefon Numarası:</label>
+        <input type="text" id="cfgPhone" value="905320000000" placeholder="Örn: 905321234567">
+        <span style="font-size:11px; color:#64748b; margin-top:4px; display:block;">
+          💡 Ülke koduyla beraber başında 0 veya + olmadan (Örn: 90532...)
+        </span>
+      </div>
+    </div>
+
+    <div>
+      <label>Araç Plakaları (Her satıra bir plaka):</label>
+      <textarea id="cfgPlates">16 ABC 101
+16 DEF 202
+16 GHK 303
+16 XYZ 404
+27 PT 460
+27 PT 461
+27 PT 462</textarea>
+    </div>
+
+    <div class="btn-row">
+      <button type="button" class="btn-primary" onclick="generateAllQrs()">
+        🔄 QR Kodları Yeniden Oluştur
+      </button>
+      <button type="button" class="btn-print" onclick="window.print()">
+        🖨️ Yazdır / PDF Olarak Kaydet (A4)
+      </button>
+    </div>
+  </div>
+
+  <!-- QR KOD KARTLARI BASKI ALANI -->
+  <div id="printSheet" class="print-sheet">
+    <!-- Dinamik Kartlar Buraya Üretilir -->
+  </div>
+
+  <script>
+    function generateAllQrs() {
+      const container = document.getElementById('printSheet');
+      container.innerHTML = '';
+
+      let baseUrl = document.getElementById('cfgFormUrl').value.trim();
+      let phone = document.getElementById('cfgPhone').value.trim().replace(/\D/g, '');
+      const platesRaw = document.getElementById('cfgPlates').value.trim();
+
+      if (!platesRaw) {
+        alert('Lütfen en az bir plaka yazınız.');
+        return;
+      }
+
+      const plates = platesRaw.split('\n')
+        .map(p => p.trim().toUpperCase())
+        .filter(p => p.length > 2);
+
+      plates.forEach((plate, idx) => {
+        // Hedef Form Linki: URL?p=PLAKA&tel=TELEFON
+        const sep = baseUrl.includes('?') ? '&' : '?';
+        const targetUrl = `${baseUrl}${sep}p=${encodeURIComponent(plate)}&tel=${encodeURIComponent(phone)}`;
+
+        const card = document.createElement('div');
+        card.className = 'qr-card';
+
+        const qrid = 'qrcode_' + idx;
+
+        card.innerHTML = `
+          <div>
+            <div class="card-org">NİZAMİYE ARAÇ BİLDİRİM FORMU</div>
+            <div class="plate-box">
+              <div class="plate-tr">TR</div>
+              <div class="plate-txt">${plate}</div>
+            </div>
+          </div>
+
+          <div class="qr-wrap" id="${qrid}"></div>
+
+          <div class="card-footer">
+            📱 Telefonunuzun kamerası ile QR kodu okutunuz.<br>
+            Açılan formdan <strong>KM ve Hedefi</strong> yazıp WhatsApp ile güvenliğe iletiniz.
+          </div>
+        `;
+
+        container.appendChild(card);
+
+        // QR Kodu Çiz
+        new QRCode(document.getElementById(qrid), {
+          text: targetUrl,
+          width: 170,
+          height: 170,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      });
+    }
+
+    // Sayfa açıldığında otomatik üret
+    window.onload = generateAllQrs;
+  </script>
+</body>
+</html>

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Araç QR Kod Yazdırma & Etiket Sayfası</title>
   <script src="qrcode.min.js"></script>
+  <link rel="icon" type="image/png" href="app_icon.png">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -38,6 +39,19 @@
       margin-bottom: 18px;
       line-height: 1.5;
     }
+    .sync-notice {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -69,7 +83,8 @@
       font-family: monospace;
       font-size: 13px;
       resize: vertical;
-      height: 90px;
+      height: 110px;
+      line-height: 1.5;
     }
     .btn-row {
       display: flex;
@@ -98,6 +113,13 @@
       color: #ffffff;
     }
     .btn-print:hover { background: #047857; }
+    .btn-sync {
+      background: #475569;
+      color: #ffffff;
+      font-size: 12px;
+      padding: 8px 14px;
+    }
+    .btn-sync:hover { background: #334155; }
 
     /* Etiket Sayfa Izgarası */
     .print-sheet {
@@ -129,7 +151,7 @@
       color: #64748b;
       letter-spacing: 1px;
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     /* Plaka Stili */
@@ -140,7 +162,7 @@
       border-radius: 8px;
       background: #ffffff;
       overflow: hidden;
-      margin-bottom: 14px;
+      margin-bottom: 6px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     .plate-tr {
@@ -158,6 +180,13 @@
       color: #0f172a;
       padding: 4px 14px;
       letter-spacing: 2px;
+    }
+
+    .card-brand {
+      font-size: 12px;
+      font-weight: bold;
+      color: #475569;
+      margin-bottom: 10px;
     }
 
     .qr-wrap {
@@ -213,16 +242,23 @@
       🚗 Araç QR Kod Üretici & Yazdırma Paneli
     </div>
     <div class="panel-sub">
-      Bu sayfa üzerinden herhangi bir sunucuya ihtiyaç duymadan araçlarınız için QR kod etiketleri üretebilirsiniz.<br>
-      Şoför araçtaki QR kodu okuttuğunda doğrudan telefonunda form açılır ve güvenliğin WhatsApp numarasına bildirimi iletir.
+      Bu sayfa Yönetici Paneli (`admin.html`) ile tam senkronizedir. Yönetici panelinde eklediğiniz veya düzenlediğiniz tüm araçlar buraya otomatik yansır.
+    </div>
+
+    <!-- Senkronizasyon Durum Bildirimi -->
+    <div id="syncNotice" class="sync-notice">
+      <span>🔄 Yönetici Paneli Araç Listesi ile Tam Senkronize</span>
+      <button type="button" onclick="loadVehiclesFromStorage()" class="btn-sync" style="margin-left:auto;">
+        Listeyi Yenile
+      </button>
     </div>
 
     <div class="form-grid">
       <div>
         <label>Formun Bulunduğu İnternet Adresi (URL):</label>
-        <input type="text" id="cfgFormUrl" value="https://gokhankarlitepe.github.io/arac_takip_sistemi/nizamiye_form.html" placeholder="Örn: https://siteniz.com/nizamiye_form.html">
+        <input type="text" id="cfgFormUrl" value="https://gokhankarlitepe.github.io/arac_takip_sistemi/" placeholder="Örn: https://gokhankarlitepe.github.io/arac_takip_sistemi/">
         <span style="font-size:11px; color:#64748b; margin-top:4px; display:block;">
-          💡 nizamiye_form.html dosyasını yüklediğiniz web adresi (GitHub Pages, Vercel, vb.).
+          💡 Şoför QR kodu okuttuğunda açılacak canlı form adresi.
         </span>
       </div>
 
@@ -236,19 +272,16 @@
     </div>
 
     <div>
-      <label>Araç Plakaları (Her satıra bir plaka):</label>
-      <textarea id="cfgPlates">16 ABC 101
-16 DEF 202
-16 GHK 303
-16 XYZ 404
-27 PT 460
-27 PT 461
-27 PT 462</textarea>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin-bottom:0;">Araç Listesi (Plaka | Model):</label>
+        <span style="font-size:11px; color:#64748b;">Her satıra: Plaka veya Plaka | Marka Model</span>
+      </div>
+      <textarea id="cfgPlates" placeholder="Örn: 16 ABC 101 | Ford Courier"></textarea>
     </div>
 
     <div class="btn-row">
-      <button type="button" class="btn-primary" onclick="generateAllQrs()">
-        🔄 QR Kodları Yeniden Oluştur
+      <button type="button" class="btn-primary" onclick="applyAndGenerate()">
+        🔄 QR Kodları Yeniden Oluştur & Senkronize Et
       </button>
       <button type="button" class="btn-print" onclick="window.print()">
         🖨️ Yazdır / PDF Olarak Kaydet (A4)
@@ -262,25 +295,117 @@
   </div>
 
   <script>
+    const DEFAULT_VEHICLES = [
+      { plate: "16 ABC 101", brand_model: "Şirket Aracı 1", last_km: 145000 },
+      { plate: "16 DEF 202", brand_model: "Şirket Aracı 2", last_km: 98000 },
+      { plate: "16 GHK 303", brand_model: "Şirket Aracı 3", last_km: 210000 },
+      { plate: "16 XYZ 404", brand_model: "Sevkiyat Aracı", last_km: 67000 },
+      { plate: "27 PT 460", brand_model: "Nizamiye Aracı 1", last_km: 125000 },
+      { plate: "27 PT 461", brand_model: "Nizamiye Aracı 2", last_km: 130000 },
+      { plate: "27 PT 462", brand_model: "Nizamiye Aracı 3", last_km: 84000 }
+    ];
+
+    let currentVehicles = [];
+
+    // 1. Yönetici Panelinden (URL veya LocalStorage) Araçları Çek
+    function loadVehiclesFromStorage() {
+      // A) URL parametresi kontrolü (?data=...)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlData = urlParams.get('data');
+      if (urlData) {
+        try {
+          const parsed = JSON.parse(decodeURIComponent(urlData));
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            currentVehicles = parsed;
+            localStorage.setItem('nizamiye_admin_vehicles', JSON.stringify(currentVehicles));
+            populateTextarea();
+            generateAllQrs();
+            return;
+          }
+        } catch (e) {
+          console.warn('URL data parse hatası:', e);
+        }
+      }
+
+      // B) LocalStorage kontrolü
+      try {
+        const stored = localStorage.getItem('nizamiye_admin_vehicles');
+        if (stored) {
+          currentVehicles = JSON.parse(stored);
+        } else {
+          currentVehicles = DEFAULT_VEHICLES;
+          localStorage.setItem('nizamiye_admin_vehicles', JSON.stringify(currentVehicles));
+        }
+      } catch (e) {
+        currentVehicles = DEFAULT_VEHICLES;
+      }
+
+      populateTextarea();
+      generateAllQrs();
+    }
+
+    function populateTextarea() {
+      const lines = currentVehicles.map(v => {
+        if (v.brand_model) return `${v.plate} | ${v.brand_model}`;
+        return v.plate;
+      });
+      document.getElementById('cfgPlates').value = lines.join('\n');
+    }
+
+    // 2. Textarea'daki Değişiklikleri Uygula ve LocalStorage ile Senkronize Et
+    function applyAndGenerate() {
+      const rawText = document.getElementById('cfgPlates').value.trim();
+      if (!rawText) {
+        alert('Lütfen en az bir plaka yazınız.');
+        return;
+      }
+
+      const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const updatedList = [];
+
+      lines.forEach(line => {
+        let plate = line;
+        let brand = '';
+
+        if (line.includes('|')) {
+          const parts = line.split('|');
+          plate = parts[0].trim().toUpperCase();
+          brand = parts[1].trim();
+        } else {
+          plate = line.toUpperCase();
+        }
+
+        // Mevcut listede varsa son kilometresini koru
+        const existing = currentVehicles.find(v => v.plate === plate);
+        updatedList.push({
+          plate: plate,
+          brand_model: brand || (existing ? existing.brand_model : 'Şirket Aracı'),
+          last_km: existing ? existing.last_km : 0
+        });
+      });
+
+      currentVehicles = updatedList;
+      localStorage.setItem('nizamiye_admin_vehicles', JSON.stringify(currentVehicles));
+      generateAllQrs();
+    }
+
+    // 3. QR Kod Kartlarını Oluştur
     function generateAllQrs() {
       const container = document.getElementById('printSheet');
       container.innerHTML = '';
 
       let baseUrl = document.getElementById('cfgFormUrl').value.trim();
       let phone = document.getElementById('cfgPhone').value.trim().replace(/\D/g, '');
-      const platesRaw = document.getElementById('cfgPlates').value.trim();
 
-      if (!platesRaw) {
-        alert('Lütfen en az bir plaka yazınız.');
+      if (!currentVehicles || currentVehicles.length === 0) {
+        container.innerHTML = '<div style="grid-column: span 2; text-align:center; padding:40px; color:#64748b;">Kayıtlı araç bulunamadı.</div>';
         return;
       }
 
-      const plates = platesRaw.split('\n')
-        .map(p => p.trim().toUpperCase())
-        .filter(p => p.length > 2);
+      currentVehicles.forEach((v, idx) => {
+        const plate = (v.plate || '').trim().toUpperCase();
+        const brand = v.brand_model || '';
 
-      plates.forEach((plate, idx) => {
-        // Hedef Form Linki: URL?p=PLAKA&tel=TELEFON
         const sep = baseUrl.includes('?') ? '&' : '?';
         const targetUrl = `${baseUrl}${sep}p=${encodeURIComponent(plate)}&tel=${encodeURIComponent(phone)}`;
 
@@ -296,6 +421,7 @@
               <div class="plate-tr">TR</div>
               <div class="plate-txt">${plate}</div>
             </div>
+            ${brand ? `<div class="card-brand">${brand}</div>` : ''}
           </div>
 
           <div class="qr-wrap" id="${qrid}"></div>
@@ -320,8 +446,14 @@
       });
     }
 
-    // Sayfa açıldığında otomatik üret
-    window.onload = generateAllQrs;
+    // 4. Yönetici Paneli Başka Sekmede Değişirse Anında Algıla
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'nizamiye_admin_vehicles') {
+        loadVehiclesFromStorage();
+      }
+    });
+
+    window.onload = loadVehiclesFromStorage;
   </script>
 </body>
 </html>

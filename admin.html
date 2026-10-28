@@ -220,9 +220,9 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <a href="QR_Kod_Yazdir.html" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow flex items-center gap-2">
+          <button type="button" onclick="openQrPrintPage()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow flex items-center gap-2 cursor-pointer active:scale-95 transition-all">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> A4 Yazdırma Sayfasını Aç
-          </a>
+          </button>
         </div>
       </div>
 
@@ -854,6 +854,11 @@
       if (tabId === 'tripsTab') document.getElementById('tabBtnTrips').className = 'pb-3 border-b-2 border-blue-600 text-blue-600 flex items-center gap-2';
       if (tabId === 'qrTab') document.getElementById('tabBtnQr').className = 'pb-3 border-b-2 border-blue-600 text-blue-600 flex items-center gap-2';
       if (tabId === 'manageTab') document.getElementById('tabBtnManage').className = 'pb-3 border-b-2 border-blue-600 text-blue-600 flex items-center gap-2';
+    }
+
+    function openQrPrintPage() {
+      const vData = encodeURIComponent(JSON.stringify(allVehicles));
+      window.open('QR_Kod_Yazdir.html?data=' + vData, '_blank');
     }
 
     init();

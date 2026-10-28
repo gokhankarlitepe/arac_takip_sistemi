@@ -6,6 +6,7 @@
   <title>Yönetim & Denetim Paneli - Araç Takip</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="qrcode.min.js"></script>
   <style>
     @media print {
       body * { visibility: hidden; }
@@ -16,12 +17,6 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
 
-  <!-- Sunucu Kapalıysa Çıkan Uyarı -->
-  <div id="serverOfflineNotice" class="hidden bg-rose-600 text-white font-bold text-xs p-3 text-center sticky top-0 z-50 shadow-lg flex items-center justify-center gap-2">
-    <i class="fa-solid fa-triangle-exclamation"></i>
-    <span>SUNUCU BAĞLANTISI KESİLDİ: Lütfen bilgisayarınızdaki "Yonetici_Masaustu_Baslat.bat" dosyasının açık olduğunu kontrol ediniz.</span>
-  </div>
-
   <!-- Üst Bar -->
   <header class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-30 shadow-sm">
     <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -31,19 +26,24 @@
         </div>
         <div>
           <h1 class="text-xl font-black text-slate-900 tracking-tight">Araç Filosu & Çıkış Yönetim Paneli</h1>
-          <p class="text-xs text-slate-500">Günlük Raporlar, Denetim, KM Takibi ve Araç QR Kodları</p>
+          <p class="text-xs text-slate-500">
+            Güvenlik WhatsApp Bildirimleri, KM Takibi ve Araç QR Kodları
+            <span class="inline-flex items-center px-2 py-0.5 ml-1.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+              <i class="fa-solid fa-cloud mr-1"></i> Bağımsız / Bulut Modu
+            </span>
+          </p>
         </div>
       </div>
 
-      <div class="flex items-center space-x-3">
-        <a href="/security.html" target="_blank" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 shadow">
-          <i class="fa-solid fa-shield-halved text-amber-400"></i> Güvenlik / Nizamiye Ekranı
-        </a>
-        <a href="/driver.html" target="_blank" class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 flex items-center gap-2">
-          <i class="fa-solid fa-mobile-screen"></i> Sürücü Ekranı
-        </a>
-        <a href="/api/export/excel" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow transition-all">
-          <i class="fa-solid fa-file-excel"></i> Excel Raporu İndir
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="openPasteModal()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 shadow active:scale-95 transition-all">
+          <i class="fa-brands fa-whatsapp text-emerald-400 text-sm"></i> WhatsApp Raporu Yapıştır
+        </button>
+        <button onclick="downloadExcelCsv()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow transition-all active:scale-95">
+          <i class="fa-solid fa-file-excel"></i> Excel (CSV) İndir
+        </button>
+        <a href="nizamiye_form.html" target="_blank" class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 flex items-center gap-2">
+          <i class="fa-solid fa-mobile-screen"></i> Şoför Formu
         </a>
       </div>
     </div>
@@ -57,9 +57,9 @@
       
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Bugünkü Çıkışlar</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Toplam Kayıtlı Hareket</p>
           <h3 id="statTodayTrips" class="text-2xl font-black text-slate-900 mt-1">0</h3>
-          <p class="text-[11px] text-slate-500 mt-1">İşletme dışı görev sayısı</p>
+          <p class="text-[11px] text-slate-500 mt-1">Arşivdeki araç çıkışları</p>
         </div>
         <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
           <i class="fa-solid fa-truck-moving"></i>
@@ -75,7 +75,7 @@
             </button>
           </div>
           <h3 id="statOutside" class="text-2xl font-black text-amber-600 mt-1">0</h3>
-          <p class="text-[11px] text-slate-500 mt-1">Giriş yapması beklenen araç</p>
+          <p class="text-[11px] text-slate-500 mt-1">Dönüşü beklenen araç</p>
         </div>
         <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
           <i class="fa-solid fa-hourglass-half"></i>
@@ -84,9 +84,9 @@
 
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Bugün Yapılan Yol</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Toplam Yapılan Yol</p>
           <h3 id="statTotalKm" class="text-2xl font-black text-emerald-600 mt-1">0 <span class="text-sm font-semibold text-slate-500">KM</span></h3>
-          <p class="text-[11px] text-slate-500 mt-1">Tamamlanan görevler toplamı</p>
+          <p class="text-[11px] text-slate-500 mt-1">Hesaplanan net mesafe</p>
         </div>
         <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
           <i class="fa-solid fa-gauge-high"></i>
@@ -95,8 +95,8 @@
 
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Toplam Kayıtlı Filo</p>
-          <h3 id="statVehiclesCount" class="text-2xl font-black text-indigo-600 mt-1">0</h3>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Kayıtlı Araç Filosu</p>
+          <h3 id="statVehiclesCount" class="text-2xl font-black text-indigo-600 mt-1">7</h3>
           <p class="text-[11px] text-slate-500 mt-1">Sistemdeki araç adedi</p>
         </div>
         <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
@@ -111,21 +111,18 @@
       <button onclick="switchTab('tripsTab')" id="tabBtnTrips" class="pb-3 border-b-2 border-blue-600 text-blue-600 flex items-center gap-2">
         <i class="fa-solid fa-list-check"></i> Çıkış / Giriş Hareket Kayıtları
       </button>
-      <button onclick="switchTab('archivesTab')" id="tabBtnArchives" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-2">
-        <i class="fa-solid fa-folder-tree text-emerald-600"></i> Güvenlikten Gelen Arşivler
-      </button>
       <button onclick="switchTab('qrTab')" id="tabBtnQr" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-2">
         <i class="fa-solid fa-qrcode"></i> Araç QR Kodları (Yazdır & Yapıştır)
       </button>
       <button onclick="switchTab('manageTab')" id="tabBtnManage" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-2">
-        <i class="fa-solid fa-users-gear"></i> Araç & Sürücü Yönetimi
+        <i class="fa-solid fa-users-gear"></i> Araç Filosu Yönetimi
       </button>
     </div>
 
     <!-- 1. SEKME: HAREKET KAYITLARI & FİLTRELEME -->
     <div id="tripsTab" class="space-y-4">
       
-      <!-- WHATSAPP / E-POSTA İÇE AKTARMA KARTI -->
+      <!-- BİLDİRİM / HIZLI YAPISŞTIRMA KARTI -->
       <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-dashed border-emerald-300 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center space-x-3.5">
           <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-2xl shrink-0 shadow-md">
@@ -133,29 +130,23 @@
           </div>
           <div>
             <h3 class="text-sm font-black text-emerald-950 flex items-center gap-2">
-              WhatsApp'tan Gelen Raporu Sisteme Aktar
-              <span class="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded-full">Seçenek 2: WhatsApp Entegre</span>
+              Güvenlikten Gelen WhatsApp Raporunu Buraya Aktarın
             </h3>
             <p class="text-xs text-emerald-800 mt-0.5">
-              Güvenliğin WhatsApp ile attığı Excel dosyasını seçebilir veya gelen WhatsApp metnini yapıştırabilirsiniz.
+              Güvenlik telefonundaki "Yöneticiye Rapor Gönder" tuşundan WhatsApp'ınıza gelen mesajı kopyalayıp tek tıkla arşive işleyebilirsiniz.
             </p>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 shrink-0">
-          <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="uploadExcelReport(this)">
-          <button onclick="document.getElementById('excelFileInput').click()" id="btnUploadExcel" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 active:scale-95 transition-all">
-            <i class="fa-solid fa-file-excel text-sm"></i>
-            <span>Excel Yükle</span>
-          </button>
-          <button onclick="openPasteModal()" class="bg-slate-900 hover:bg-slate-800 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 active:scale-95 transition-all">
+          <button onclick="openPasteModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 active:scale-95 transition-all">
             <i class="fa-solid fa-paste text-sm"></i>
-            <span>Mesajı Yapıştır</span>
+            <span>Mesajı Yapıştır & İçe Aktar</span>
           </button>
         </div>
       </div>
 
-      <!-- Yükleme Sonuç Bildirimi -->
+      <!-- İşlem Bildirimi -->
       <div id="importResultNotice" class="hidden bg-emerald-100 border border-emerald-300 text-emerald-900 px-4 py-3 rounded-xl text-xs font-bold flex items-center justify-between">
         <span id="importResultText"></span>
         <button onclick="document.getElementById('importResultNotice').classList.add('hidden')" class="text-emerald-700 hover:text-emerald-950">
@@ -166,22 +157,25 @@
       <!-- Filtre Çubuğu -->
       <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-3">
         <div class="flex-1 min-w-[150px]">
-          <input type="text" id="filterPlate" placeholder="Plaka Ara (Örn: 16 ABC)..." class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl uppercase">
+          <input type="text" id="filterPlate" oninput="applyFilters()" placeholder="Plaka Ara (Örn: 16 ABC)..." class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl uppercase">
         </div>
         <div class="flex-1 min-w-[150px]">
-          <input type="text" id="filterDriver" placeholder="Sürücü / Personel Ara..." class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+          <input type="text" id="filterDriver" oninput="applyFilters()" placeholder="Şoför / Telefon Ara..." class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
         </div>
         <div class="flex items-center gap-2 text-xs text-slate-500">
           <span>Tarih:</span>
-          <input type="date" id="filterDateStart" class="p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
+          <input type="date" id="filterDateStart" onchange="applyFilters()" class="p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
           <span>-</span>
-          <input type="date" id="filterDateEnd" class="p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
+          <input type="date" id="filterDateEnd" onchange="applyFilters()" class="p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
         </div>
         <button onclick="applyFilters()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow">
           <i class="fa-solid fa-filter"></i> Filtrele
         </button>
         <button onclick="resetFilters()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold px-3 py-2.5 rounded-xl">
           Sıfırla
+        </button>
+        <button onclick="downloadExcelCsv()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl ml-auto flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-file-excel"></i> Excel (CSV) İndir
         </button>
       </div>
 
@@ -193,14 +187,13 @@
               <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold tracking-wider">
                 <th class="p-3.5">Durum</th>
                 <th class="p-3.5">Plaka</th>
-                <th class="p-3.5">Sürücü</th>
-                <th class="p-3.5">Gidiş Sebebi</th>
+                <th class="p-3.5">Şoför / Telefon</th>
+                <th class="p-3.5">Gidiş Sebebi / Hedef</th>
                 <th class="p-3.5">Çıkış Saati</th>
-                <th class="p-3.5">Çıkış KM / Foto</th>
+                <th class="p-3.5">Çıkış KM</th>
                 <th class="p-3.5">Giriş Saati</th>
-                <th class="p-3.5">Giriş KM / Foto</th>
+                <th class="p-3.5">Dönüş KM</th>
                 <th class="p-3.5">Yapılan Yol</th>
-                <th class="p-3.5">Süre</th>
                 <th class="p-3.5 text-right">İşlem</th>
               </tr>
             </thead>
@@ -213,265 +206,226 @@
 
     </div>
 
-    <!-- 2. SEKME: GÜVENLİKTEN GELEN SUNUCU ARŞİVLERİ -->
-    <div id="archivesTab" class="hidden space-y-4">
-      <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-bold text-emerald-900 flex items-center gap-2">
-            <i class="fa-solid fa-server"></i> İşletme Sunucusuna Aktarılan Arşiv Paketleri
-          </h3>
-          <p class="text-xs text-emerald-700 mt-0.5">
-            Güvenlik görevlisinin cep telefonundan "Yöneticiye ve Sunucuya Aktar" tuşuna basarak işletme server'ına gönderdiği günlük/haftalık arşivler.
-          </p>
-        </div>
-        <button onclick="loadArchives()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow flex items-center gap-1.5">
-          <i class="fa-solid fa-arrows-rotate"></i> Yenile
-        </button>
-      </div>
-
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold tracking-wider">
-              <th class="p-3.5">Aktarım Tarihi & Saati</th>
-              <th class="p-3.5">Aktaran Güvenlik</th>
-              <th class="p-3.5">Kayıt Adedi</th>
-              <th class="p-3.5">Sunucu Arşiv Klasörü</th>
-              <th class="p-3.5">Excel Raporu</th>
-            </tr>
-          </thead>
-          <tbody id="archivesTableBody" class="divide-y divide-slate-100">
-            <!-- Dinamik arşivler -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 3. SEKME: ARAÇ QR KODLARI (YAZDIR & YAPIŞTIR) -->
+    <!-- 2. SEKME: ARAÇ QR KODLARI (YAZDIR & YAPIŞTIR) -->
     <div id="qrTab" class="hidden space-y-4">
-      <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 class="text-sm font-bold text-blue-900 flex items-center gap-2">
-            <i class="fa-solid fa-print"></i> Araç QR Kod Çıktı Sayfası
+          <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-qrcode text-blue-600"></i> Araç Torpido / Güneşlik QR Kod Etiketleri
           </h3>
-          <p class="text-xs text-blue-700 mt-0.5">
-            Bu QR kodları yazıcıdan bastırıp araçların torpidosuna yapıştırınız. Şoför okuttuğunda otomatik işlem başlar.
+          <p class="text-xs text-slate-500 mt-1">
+            Araçlarınıza yapıştırmak için QR kodlarını doğrudan A4 çıktısı alabilir veya PDF olarak kaydedebilirsiniz.
           </p>
         </div>
 
-        <!-- QR Modu Seçici (WhatsApp vs Yerel IP) -->
-        <div class="flex flex-wrap items-center gap-2 bg-white p-2 rounded-xl border border-blue-200">
-          <label class="text-[11px] font-bold text-slate-700">QR Türü:</label>
-          <select id="qrModeSelect" onchange="loadVehicles()" class="text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-800">
-            <option value="web" selected>🔵 Akıllı Mobil QR (Gidişte Çıkış, Dönüşte Otomatik Giriş Yapar)</option>
-            <option value="whatsapp">🟢 Sabit WhatsApp QR (Yalnızca Çıkış Mesajı)</option>
-          </select>
-          <input type="text" id="qrPhoneInput" placeholder="Güvenlik WhatsApp No (Örn: 905452394286)" onchange="loadVehicles()" class="text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg font-mono min-w-[220px]">
-          <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow flex items-center gap-1.5">
-            <i class="fa-solid fa-print"></i> Yazdır (A4)
-          </button>
+        <div class="flex items-center gap-3">
+          <a href="QR_Kod_Yazdir.html" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow flex items-center gap-2">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> A4 Yazdırma Sayfasını Aç
+          </a>
         </div>
       </div>
 
-      <!-- QR Kod Kartları Izgarası (Yazdırılabilir Alan) -->
-      <div id="printArea" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <!-- Dinamik yüklenecek -->
+      <!-- QR Kartları Izgarası -->
+      <div id="printArea" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <!-- Dinamik QR Kartları -->
       </div>
     </div>
 
-    <!-- 3. SEKME: ARAÇ & SÜRÜCÜ YÖNETİMİ -->
-    <div id="manageTab" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
-      
-      <!-- Sol: Yeni Araç Ekle & Liste -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
-          <i class="fa-solid fa-car text-blue-600"></i> Yeni Araç Ekle
-        </h3>
-        <div class="space-y-3">
+    <!-- 3. SEKME: ARAÇ FİLOSU YÖNETİMİ -->
+    <div id="manageTab" class="hidden space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Yeni Araç Ekle -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-plus-circle text-blue-600"></i> Yeni Araç Ekle
+          </h3>
           <div>
-            <label class="text-xs font-semibold text-slate-600 block mb-1">Araç Plakası *</label>
-            <input type="text" id="newVehiclePlate" placeholder="Örn: 16 ABC 999" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl uppercase">
+            <label class="text-xs font-bold text-slate-600 uppercase block mb-1">Araç Plakası *</label>
+            <input type="text" id="newVehiclePlate" placeholder="Örn: 16 ABC 101" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl uppercase font-mono font-bold">
           </div>
           <div>
-            <label class="text-xs font-semibold text-slate-600 block mb-1">Marka / Model / Birim</label>
-            <input type="text" id="newVehicleBrand" placeholder="Örn: Ford Courier (Satış)" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+            <label class="text-xs font-bold text-slate-600 uppercase block mb-1">Marka / Model</label>
+            <input type="text" id="newVehicleBrand" placeholder="Örn: Ford Courier" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
           </div>
           <div>
-            <label class="text-xs font-semibold text-slate-600 block mb-1">Mevcut Kilometre</label>
-            <input type="number" id="newVehicleKm" placeholder="Örn: 45000" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+            <label class="text-xs font-bold text-slate-600 uppercase block mb-1">Başlangıç Kilometresi</label>
+            <input type="number" id="newVehicleKm" placeholder="Örn: 145000" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono">
           </div>
-          <button onclick="addNewVehicle()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl shadow">
-            Aracı Sisteme Ekle
+          <button onclick="addNewVehicle()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-3 rounded-xl shadow transition-all">
+            Aracı Kaydet
           </button>
         </div>
-      </div>
 
-      <!-- Sağ: Sürücüler Listesi -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
-          <i class="fa-solid fa-users text-emerald-600"></i> Kayıtlı Sürücüler & Vardiya Personeli
-        </h3>
-        <p class="text-xs text-slate-500">
-          Gece vardiyasında şoförlerin mobil ekrandan eklediği kişiler de burada kalıcı olarak listelenir.
-        </p>
-        <div id="driverListContainer" class="divide-y divide-slate-100 max-h-80 overflow-y-auto pr-2">
-          <!-- Dinamik sürücüler -->
+        <!-- Kayıtlı Araçlar Listesi -->
+        <div class="md:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <h3 class="text-sm font-black text-slate-900 flex items-center justify-between">
+            <span>Kayıtlı Araçlar (<span id="lblVehicleCount">0</span>)</span>
+            <button onclick="resetDefaultVehicles()" class="text-xs text-blue-600 hover:underline font-semibold">Varsayılanları Yükle</button>
+          </h3>
+          <div id="vehiclesListContainer" class="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
+            <!-- Araç listesi -->
+          </div>
         </div>
-      </div>
 
+      </div>
     </div>
 
   </main>
 
-  <!-- WHATSAPP METİN YAPIŞTIRMA MODALI -->
-  <div id="pasteModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="max-w-lg w-full bg-white rounded-3xl p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-          <i class="fa-brands fa-whatsapp text-emerald-600 text-lg"></i>
-          WhatsApp Rapor Metnini Yapıştır
+  <!-- WHATSAPP METNİ YAPIŞTIRMA MODALI -->
+  <div id="pasteModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="max-w-xl w-full bg-white rounded-3xl p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+          <i class="fa-brands fa-whatsapp text-emerald-600 text-xl"></i>
+          WhatsApp Raporunu Buraya Yapıştırın
         </h3>
-        <button onclick="closePasteModal()" class="text-slate-400 hover:text-slate-600">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
+        <button onclick="closePasteModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
       </div>
 
-      <p class="text-xs text-slate-500">
-        Güvenliğin WhatsApp'tan gönderdiği günlük rapor metnini buraya yapıştırıp "İçe Aktar" dediğinizde tüm kayıtlar arşivinize işlenir.
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Güvenlik görevlisinin WhatsApp üzerinden attığı <strong>günlük veya haftalık raporu</strong> ya da tekil araç çıkış/giriş mesajlarını buraya yapıştırıp <strong>"İçe Aktar & Kaydet"</strong> butonuna basınız.
       </p>
 
-      <textarea id="pasteRawText" rows="6" placeholder="WhatsApp mesajını buraya yapıştırınız..." class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:outline-none focus:border-emerald-500"></textarea>
+      <textarea id="pasteRawText" rows="8" placeholder="WhatsApp mesajını buraya yapıştırınız (Ctrl+V)..." class="w-full p-3 bg-slate-50 border-2 border-emerald-300 rounded-2xl text-xs font-mono focus:outline-none focus:border-emerald-500"></textarea>
 
       <div class="flex gap-2 justify-end pt-2">
         <button onclick="closePasteModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">İptal</button>
-        <button onclick="submitPastedWhatsapp()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow">İçe Aktar & Kaydet</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- FOTOĞRAF İNCELEME MODALI -->
-  <div id="adminPhotoModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="closeAdminPhotoModal()">
-    <div class="max-w-2xl w-full bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
-      <div class="p-3.5 border-b border-slate-800 flex items-center justify-between">
-        <h4 id="adminModalTitle" class="text-sm font-bold text-white">KM Sayaç Görseli</h4>
-        <button onclick="closeAdminPhotoModal()" class="text-slate-400 hover:text-white">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button onclick="submitPastedWhatsapp()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow flex items-center gap-2">
+          <i class="fa-solid fa-circle-check"></i> İçe Aktar & Kaydet
         </button>
-      </div>
-      <div class="p-4 bg-black flex items-center justify-center">
-        <img id="adminModalImg" src="" alt="KM" class="max-h-[70vh] object-contain rounded-lg">
       </div>
     </div>
   </div>
 
   <script>
+    // VARSAYILAN ARAÇLAR
+    const DEFAULT_VEHICLES = [
+      { plate: "16 ABC 101", brand_model: "Şirket Aracı 1", last_km: 145000 },
+      { plate: "16 DEF 202", brand_model: "Şirket Aracı 2", last_km: 98000 },
+      { plate: "16 GHK 303", brand_model: "Şirket Aracı 3", last_km: 210000 },
+      { plate: "16 XYZ 404", brand_model: "Sevkiyat Aracı", last_km: 67000 },
+      { plate: "27 PT 460", brand_model: "Nizamiye Aracı 1", last_km: 125000 },
+      { plate: "27 PT 461", brand_model: "Nizamiye Aracı 2", last_km: 130000 },
+      { plate: "27 PT 462", brand_model: "Nizamiye Aracı 3", last_km: 84000 }
+    ];
+
     let allTrips = [];
     let allVehicles = [];
-    let allDrivers = [];
 
-    async function init() {
+    // Başlangıç Yüklemesi
+    function init() {
+      loadLocalData();
+      renderAll();
+    }
+
+    function loadLocalData() {
+      // 1. Araçlar
       try {
-        await loadStats();
-        await loadTrips();
-        await loadVehicles();
-        await loadDrivers();
-        const notice = document.getElementById('serverOfflineNotice');
-        if (notice) notice.classList.add('hidden');
+        const storedVehicles = localStorage.getItem('nizamiye_admin_vehicles');
+        if (storedVehicles) {
+          allVehicles = JSON.parse(storedVehicles);
+        } else {
+          allVehicles = DEFAULT_VEHICLES;
+          saveVehicles();
+        }
       } catch (e) {
-        const notice = document.getElementById('serverOfflineNotice');
-        if (notice) notice.classList.remove('hidden');
+        allVehicles = DEFAULT_VEHICLES;
       }
-    }
 
-    // İstatistikler (AdGuard / Brave Shields engellemesine karşı dashboard-summary ismi kullanıldı)
-    async function loadStats() {
+      // 2. Hareket Kayıtları
       try {
-        const res = await fetch('/api/dashboard-summary');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        document.getElementById('statTodayTrips').innerText = data.todayTripsCount;
-        document.getElementById('statOutside').innerText = data.outsideCount;
-        document.getElementById('statTotalKm').innerHTML = `${data.todayTotalKm.toLocaleString('tr-TR')} <span class="text-sm font-semibold text-slate-500">KM</span>`;
-        document.getElementById('statVehiclesCount').innerText = data.totalVehicles;
-      } catch (err) {
-        console.warn('Stats yüklenemedi:', err);
+        const storedTrips = localStorage.getItem('nizamiye_admin_trips');
+        if (storedTrips) {
+          allTrips = JSON.parse(storedTrips);
+        } else {
+          allTrips = [];
+        }
+      } catch (e) {
+        allTrips = [];
       }
     }
 
-    // Hareketleri Getir
-    async function loadTrips(query = '') {
-      try {
-        const res = await fetch('/api/trips/history?' + query);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        allTrips = await res.json();
-        renderTripsTable(allTrips);
-      } catch (err) {
-        console.warn('Trips yüklenemedi:', err);
-      }
+    function saveVehicles() {
+      localStorage.setItem('nizamiye_admin_vehicles', JSON.stringify(allVehicles));
     }
 
+    function saveTrips() {
+      localStorage.setItem('nizamiye_admin_trips', JSON.stringify(allTrips));
+    }
+
+    function renderAll() {
+      updateStats();
+      renderTripsTable(allTrips);
+      renderVehiclesList();
+      renderQrCards();
+    }
+
+    // İSTATİSTİKLERİ GÜNCELLE
+    function updateStats() {
+      document.getElementById('statTodayTrips').innerText = allTrips.length;
+      
+      const outsideCount = allTrips.filter(t => t.status === 'OUTSIDE' || !t.return_time).length;
+      document.getElementById('statOutside').innerText = outsideCount;
+
+      let totalKm = 0;
+      allTrips.forEach(t => {
+        if (t.total_km) totalKm += parseInt(t.total_km);
+      });
+      document.getElementById('statTotalKm').innerHTML = `${totalKm.toLocaleString('tr-TR')} <span class="text-sm font-semibold text-slate-500">KM</span>`;
+
+      document.getElementById('statVehiclesCount').innerText = allVehicles.length;
+      document.getElementById('lblVehicleCount').innerText = allVehicles.length;
+    }
+
+    // HAREKETLER TABLOSUNU ÇİZ
     function renderTripsTable(trips) {
       const tbody = document.getElementById('tripsTableBody');
       tbody.innerHTML = '';
 
-      if (trips.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-slate-400">Kayıt bulunamadı.</td></tr>`;
+      if (!trips || trips.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-slate-400 font-semibold">Henüz kayıtlı araç hareketi yok. Yukarıdaki "WhatsApp Raporu Yapıştır" butonundan rapor aktarabilirsiniz.</td></tr>`;
         return;
       }
 
       const fragment = document.createDocumentFragment();
 
-      trips.forEach(t => {
-        const isCompleted = t.status === 'COMPLETED';
-        const isCancelled = t.status === 'CANCELLED';
-        const depDate = new Date(t.departure_time);
+      // En yeni kayıt en üstte
+      const sorted = [...trips].sort((a, b) => {
+        const timeA = new Date(a.departure_time || 0).getTime();
+        const timeB = new Date(b.departure_time || 0).getTime();
+        return timeB - timeA;
+      });
+
+      sorted.forEach(t => {
+        const isCompleted = t.status === 'COMPLETED' || t.return_time;
+        const depDate = t.departure_time ? new Date(t.departure_time) : null;
         const retDate = t.return_time ? new Date(t.return_time) : null;
 
-        let statusBadge = '';
-        if (isCancelled) {
-          statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[10px] bg-slate-100 text-slate-500">İptal Edildi</span>';
-        } else if (isCompleted) {
-          statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[10px] bg-emerald-100 text-emerald-800">Tamamlandı</span>';
-        } else {
-          statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[10px] bg-amber-100 text-amber-800 animate-pulse">Dışarıda</span>';
-        }
+        let statusBadge = isCompleted
+          ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[10px] bg-emerald-100 text-emerald-800">Tamamlandı</span>'
+          : '<span class="inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[10px] bg-amber-100 text-amber-800 animate-pulse">Dışarıda</span>';
 
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50 transition-colors';
 
         tr.innerHTML = `
-          <td class="p-3.5">
-            ${statusBadge}
-          </td>
-          <td class="p-3.5 font-bold font-mono text-slate-900">${t.plate}</td>
-          <td class="p-3.5 font-medium text-slate-800">${t.driver_name}</td>
-          <td class="p-3.5 text-slate-600">${t.destination}</td>
-          <td class="p-3.5 font-mono text-slate-700">${depDate.toLocaleString('tr-TR')}</td>
-          <td class="p-3.5 font-mono">
-            <div class="flex items-center gap-1.5">
-              <span>${t.departure_km ? t.departure_km.toLocaleString('tr-TR') : '-'}</span>
-              ${t.departure_photo ? `<button onclick="openAdminPhoto('${t.departure_photo}', '${t.plate} Çıkış KM')"><i class="fa-solid fa-camera text-blue-600 text-xs hover:scale-125 transition-transform"></i></button>` : ''}
-            </div>
-          </td>
-          <td class="p-3.5 font-mono text-slate-700">${retDate ? retDate.toLocaleString('tr-TR') : '<span class="text-amber-600 italic">Dönmedi</span>'}</td>
-          <td class="p-3.5 font-mono">
-            <div class="flex items-center gap-1.5">
-              <span>${t.return_km ? t.return_km.toLocaleString('tr-TR') : '-'}</span>
-              ${t.return_photo ? `<button onclick="openAdminPhoto('${t.return_photo}', '${t.plate} Dönüş KM')"><i class="fa-solid fa-camera text-emerald-600 text-xs hover:scale-125 transition-transform"></i></button>` : ''}
-            </div>
-          </td>
+          <td class="p-3.5">${statusBadge}</td>
+          <td class="p-3.5 font-bold font-mono text-slate-900">${t.plate || '-'}</td>
+          <td class="p-3.5 font-medium text-slate-800">${t.driver_name || t.driver || 'Şoför'}</td>
+          <td class="p-3.5 text-slate-600">${t.destination || '-'}</td>
+          <td class="p-3.5 font-mono text-slate-700">${depDate ? depDate.toLocaleString('tr-TR') : (t.time || '-')}</td>
+          <td class="p-3.5 font-mono">${t.departure_km ? t.departure_km.toLocaleString('tr-TR') + ' KM' : '-'}</td>
+          <td class="p-3.5 font-mono text-slate-700">${retDate ? retDate.toLocaleString('tr-TR') : (isCompleted ? '-' : '<span class="text-amber-600 italic">Dönmedi</span>')}</td>
+          <td class="p-3.5 font-mono">${t.return_km ? t.return_km.toLocaleString('tr-TR') + ' KM' : '-'}</td>
           <td class="p-3.5 font-bold ${t.total_km ? 'text-emerald-700' : 'text-slate-400'}">
             ${t.total_km ? '+' + t.total_km.toLocaleString('tr-TR') + ' KM' : '-'}
           </td>
-          <td class="p-3.5 text-slate-500">
-            ${t.duration_minutes ? t.duration_minutes + ' dk' : '-'}
-          </td>
           <td class="p-3.5 text-right">
-            ${t.status === 'OUTSIDE' ? `
-              <button onclick="adminCancelTrip(${t.id}, '${t.plate}')" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95" title="Aracı içeri al / kaydı sıfırla">
-                <i class="fa-solid fa-rotate-left mr-0.5"></i> Sıfırla
-              </button>
-            ` : `<span class="text-slate-300">-</span>`}
+            <button onclick="deleteTrip('${t.id || t.plate + (t.departure_time||'')}')" class="text-slate-400 hover:text-red-600 transition-colors" title="Kaydı Sil">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
           </td>
         `;
 
@@ -481,20 +435,27 @@
       tbody.appendChild(fragment);
     }
 
-    // Filtreleme
+    // FİLTRELEME
     function applyFilters() {
-      const plate = document.getElementById('filterPlate').value.trim();
-      const driver = document.getElementById('filterDriver').value.trim();
+      const plate = document.getElementById('filterPlate').value.trim().toUpperCase();
+      const driver = document.getElementById('filterDriver').value.trim().toLowerCase();
       const start = document.getElementById('filterDateStart').value;
       const end = document.getElementById('filterDateEnd').value;
 
-      const params = new URLSearchParams();
-      if (plate) params.append('plate', plate);
-      if (driver) params.append('driver', driver);
-      if (start) params.append('date_start', start);
-      if (end) params.append('date_end', end);
+      const filtered = allTrips.filter(t => {
+        if (plate && !(t.plate || '').toUpperCase().includes(plate)) return false;
+        const driverName = (t.driver_name || t.driver || '').toLowerCase();
+        if (driver && !driverName.includes(driver)) return false;
 
-      loadTrips(params.toString());
+        if (start || end) {
+          const tripDate = (t.departure_time || '').slice(0, 10);
+          if (start && tripDate && tripDate < start) return false;
+          if (end && tripDate && tripDate > end) return false;
+        }
+        return true;
+      });
+
+      renderTripsTable(filtered);
     }
 
     function resetFilters() {
@@ -502,295 +463,307 @@
       document.getElementById('filterDriver').value = '';
       document.getElementById('filterDateStart').value = '';
       document.getElementById('filterDateEnd').value = '';
-      loadTrips();
+      renderTripsTable(allTrips);
     }
 
-    // Tekil Seyahati İptal Et / Sıfırla
-    async function adminCancelTrip(tripId, plate) {
-      if (!confirm(`"${plate}" plakalı aracın dışarıda olan açık kaydı sıfırlansın ve araç içeri alınsın mı?`)) return;
-      try {
-        const res = await fetch(`/api/trips/${tripId}/cancel`, { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          loadStats();
-          loadTrips();
-        } else {
-          alert(data.error || 'İşlem başarısız.');
+    // WHATSAPP RAPORU YAPIŞTIRIP İÇE AKTARMA (100% CLIENT-SIDE & ZERO CORS ERROR)
+    function openPasteModal() {
+      document.getElementById('pasteRawText').value = '';
+      document.getElementById('pasteModal').classList.remove('hidden');
+    }
+
+    function closePasteModal() {
+      document.getElementById('pasteModal').classList.add('hidden');
+    }
+
+    function submitPastedWhatsapp() {
+      const text = document.getElementById('pasteRawText').value;
+      if (!text || !text.trim()) {
+        alert('Lütfen WhatsApp mesajını yapıştırınız.');
+        return;
+      }
+
+      let parsedCount = 0;
+      let newTrips = [];
+
+      // 1. DATA BLOK KONTROLÜ: [DATA:base64...]
+      const dataMatch = text.match(/\[DATA:\s*([A-Za-z0-9+/=\s]+)\s*\]?/i);
+      if (dataMatch) {
+        try {
+          let cleanB64 = dataMatch[1].replace(/[^A-Za-z0-9+/=]/g, '');
+          while (cleanB64.length % 4 !== 0) cleanB64 += '=';
+          const utf8Str = decodeURIComponent(escape(atob(cleanB64)));
+          const arr = JSON.parse(utf8Str);
+          if (Array.isArray(arr)) {
+            newTrips = arr;
+          }
+        } catch (e) {
+          console.warn('Base64 DATA parse hatası:', e);
         }
-      } catch (e) {
-        alert('Sunucu hatası: ' + e.message);
       }
+
+      // 2. DÜZ METİN AYRIŞTIRMA (Eğer DATA bloğu yoksa veya tekil mesajlarsa)
+      if (newTrips.length === 0) {
+        newTrips = parsePlainWhatsappText(text);
+      }
+
+      if (newTrips.length === 0) {
+        alert('Mesaj içinde tanınan bir araç hareketi bulunamadı. Lütfen nizamiye güvenlik raporunu veya araç çıkış mesajını yapıştırdığınızdan emin olunuz.');
+        return;
+      }
+
+      // 3. Mevcut trips ile birleştir (mükerrer kayıt kontrolü)
+      newTrips.forEach(item => {
+        // ID veya Plaka+Tarih eşleşmesi
+        const matchIdx = allTrips.findIndex(t => 
+          (item.id && t.id && t.id == item.id) ||
+          (t.plate === item.plate && (t.departure_time === item.departure_time || t.time === item.time))
+        );
+
+        if (matchIdx >= 0) {
+          // Mevcut kaydı güncelle (örneğin dönüş KM eklenmişse)
+          allTrips[matchIdx] = { ...allTrips[matchIdx], ...item };
+        } else {
+          // Yeni kayıt olarak ekle
+          if (!item.id) item.id = 'T_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+          allTrips.push(item);
+        }
+        parsedCount++;
+      });
+
+      saveTrips();
+      renderAll();
+      closePasteModal();
+
+      const notice = document.getElementById('importResultNotice');
+      const noticeText = document.getElementById('importResultText');
+      noticeText.innerHTML = `✅ <strong>${parsedCount} adet araç hareketi</strong> başarıyla arşive aktarıldı ve istatistikler güncellendi!`;
+      notice.classList.remove('hidden');
     }
 
-    // Tüm Dışarıdaki Araçları Toplu Sıfırla
-    async function adminResetAllOutside() {
-      if (!confirm('Dışarıda görünen TÜM açık seyahatler sıfırlanıp araçlar fabrikaya geri alınsın mı? (Unutulmuş veya takılı kalan kayıtları temizler)')) return;
-      try {
-        const res = await fetch('/api/trips/reset-all-outside', { method: 'POST' });
-        const data = await res.json();
-        alert(data.message || 'Tüm dışarıdaki araçlar sıfırlandı.');
-        loadStats();
-        loadTrips();
-      } catch (e) {
-        alert('Sunucu hatası: ' + e.message);
+    // Düz WhatsApp Metnini Ayrıştıran Akıllı Fonksiyon
+    function parsePlainWhatsappText(raw) {
+      const records = [];
+      const lines = raw.split(/\r?\n/);
+      const todayDate = new Date().toISOString().slice(0, 10);
+
+      // A) Liste formatı: "1. 🚗 *16 ABC 101* | Ahmet Yılmaz"
+      const listPattern = /(?:[0-9]+\.\s*)?(?:🚗|🏁)?\s*\*?([0-9]{2}\s*[A-Z]{1,4}\s*[0-9]{2,4})\*?\s*\|\s*([^\n\r]+)/gi;
+      let match;
+      while ((match = listPattern.exec(raw)) !== null) {
+        const plate = match[1].trim().toUpperCase();
+        const driver = match[2].trim();
+        records.push({
+          plate: plate,
+          driver_name: driver,
+          destination: 'İşletme Görevi',
+          departure_time: new Date().toISOString(),
+          status: 'COMPLETED'
+        });
       }
+
+      // B) Tekil Çıkış / Giriş Formatı
+      if (records.length === 0) {
+        const plateMatch = raw.match(/(?:Plaka|PLAKA)[*:\s]+([0-9]{2}\s*[A-Z]{1,4}\s*[0-9]{2,4})/i);
+        if (plateMatch) {
+          const plate = plateMatch[1].trim().toUpperCase();
+          const driverMatch = raw.match(/(?:Sürücü|Şoför|SURUCU)[*:\s]+([^\n\r*]+)/i);
+          const destMatch = raw.match(/(?:Hedef|Gidiş|Nereye)[*:\s]+([^\n\r*]+)/i);
+          const kmMatch = raw.match(/(?:KM Sayaç|KM|Çıkış KM)[*:\s]+([0-9]+)/i);
+          const retKmMatch = raw.match(/(?:Dönüş KM|Giriş KM)[*:\s]+([0-9]+)/i);
+
+          const isReturn = raw.includes('GİRİŞ') || raw.includes('GERİ') || retKmMatch !== null;
+
+          records.push({
+            plate: plate,
+            driver_name: driverMatch ? driverMatch[1].trim() : 'Şoför',
+            destination: destMatch ? destMatch[1].trim() : (isReturn ? 'Fabrikaya Dönüş' : 'Görev'),
+            departure_km: kmMatch ? parseInt(kmMatch[1]) : null,
+            return_km: retKmMatch ? parseInt(retKmMatch[1]) : null,
+            departure_time: new Date().toISOString(),
+            status: isReturn ? 'COMPLETED' : 'OUTSIDE'
+          });
+        }
+      }
+
+      return records;
     }
 
-    // Araçlar ve QR Kodları Yükle
-    async function loadVehicles() {
-      try {
-        const res = await fetch('/api/vehicles');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        allVehicles = await res.json();
-        renderQrCards(allVehicles);
-      } catch (err) {
-        console.warn('Vehicles yüklenemedi:', err);
+    // EXCEL (CSV) OLARAK İNDİR (TÜRKÇE KARAKTER DESTEKLİ UTF-8 BOM)
+    function downloadExcelCsv() {
+      if (allTrips.length === 0) {
+        alert('İndirilecek kayıt bulunamadı.');
+        return;
       }
+
+      const headers = ['Durum', 'Plaka', 'Şoför / Telefon', 'Gidiş Sebebi', 'Çıkış Saati', 'Çıkış KM', 'Giriş Saati', 'Dönüş KM', 'Yapılan Net KM'];
+      const rows = allTrips.map(t => [
+        t.status === 'OUTSIDE' ? 'Dışarıda' : 'Tamamlandı',
+        t.plate || '',
+        `"${(t.driver_name || t.driver || '').replace(/"/g, '""')}"`,
+        `"${(t.destination || '').replace(/"/g, '""')}"`,
+        t.departure_time ? new Date(t.departure_time).toLocaleString('tr-TR') : '',
+        t.departure_km || '',
+        t.return_time ? new Date(t.return_time).toLocaleString('tr-TR') : '',
+        t.return_km || '',
+        t.total_km || ''
+      ]);
+
+      let csvContent = '\uFEFF'; // Excel'de Türkçe karakterlerin düzgün görünmesi için UTF-8 BOM
+      csvContent += headers.join(';') + '\r\n';
+      rows.forEach(r => {
+        csvContent += r.join(';') + '\r\n';
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Arac_Takip_Raporu_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
-    async function renderQrCards(vehicles) {
-      const container = document.getElementById('printArea');
+    // TEKİL KAYIT SİLME
+    function deleteTrip(tripId) {
+      if (!confirm('Bu seyahat kaydı silinsin mi?')) return;
+      allTrips = allTrips.filter(t => (t.id != tripId && (t.plate + (t.departure_time||'')) != tripId));
+      saveTrips();
+      renderAll();
+    }
+
+    // TÜM DIŞARIDAKİLERİ SIFIRLA
+    function adminResetAllOutside() {
+      if (!confirm('Dışarıda görünen açık kayıtlar tamamlandı olarak kapatılsın mı?')) return;
+      allTrips.forEach(t => {
+        if (t.status === 'OUTSIDE' || !t.return_time) {
+          t.status = 'COMPLETED';
+          t.return_time = new Date().toISOString();
+        }
+      });
+      saveTrips();
+      renderAll();
+    }
+
+    // ARAÇLAR LİSTESİ ÇİZ
+    function renderVehiclesList() {
+      const container = document.getElementById('vehiclesListContainer');
       container.innerHTML = '';
 
-      const mode = document.getElementById('qrModeSelect') ? document.getElementById('qrModeSelect').value : 'web';
-      let phone = document.getElementById('qrPhoneInput') ? document.getElementById('qrPhoneInput').value.trim() : '';
-      phone = phone.replace(/\D/g, '');
-
-      for (const v of vehicles) {
-        // QR kod bilgisini sunucudan al (mode ve phone ile)
-        const qrRes = await fetch(`/api/qr/${encodeURIComponent(v.plate)}?mode=${mode}&phone=${phone}`);
-        const qrData = await qrRes.json();
-
-        const card = document.createElement('div');
-        card.className = 'bg-white border-2 border-slate-300 rounded-2xl p-5 text-center flex flex-col items-center justify-between shadow-sm page-break-inside-avoid';
-        card.innerHTML = `
-          <div class="border-b-2 border-slate-900 w-full pb-2 mb-3">
-            <span class="text-[10px] uppercase font-black tracking-widest text-slate-400 block">ŞİRKET ARACI ÇIKIŞ KODU</span>
-            <h2 class="text-2xl font-black font-mono tracking-wider text-slate-900">${v.plate}</h2>
-            <p class="text-xs text-slate-500 font-medium">${v.brand_model || ''}</p>
-          </div>
-
-          <div class="p-2 bg-white rounded-xl border border-slate-200 shadow-inner my-2">
-            <img src="${qrData.qrDataUrl}" alt="${v.plate} QR" class="w-44 h-44 object-contain">
-          </div>
-
-          <p class="text-[11px] font-bold text-slate-700 mt-2">
-            ${mode === 'whatsapp' ? '💬 Okutunca WhatsApp Açar' : '📱 Okutunca Mobil Form Açar'}
-          </p>
-          <p class="text-[9px] text-slate-400 mt-0.5">${v.plate} Çıkış Otomasyonu</p>
-        `;
-
-        container.appendChild(card);
-      }
-    }
-
-    // Sürücüleri Yükle
-    async function loadDrivers() {
-      try {
-        const res = await fetch('/api/drivers');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        allDrivers = await res.json();
-        renderDriversList(allDrivers);
-      } catch (err) {
-        console.warn('Drivers yüklenemedi:', err);
-      }
-    }
-
-    function renderDriversList(drivers) {
-      const container = document.getElementById('driverListContainer');
-      if (!container) return;
-      container.innerHTML = '';
-
-      drivers.forEach(d => {
+      allVehicles.forEach((v, idx) => {
         const item = document.createElement('div');
-        item.className = 'py-2.5 flex items-center justify-between text-xs';
+        item.className = 'py-3 flex items-center justify-between text-xs';
         item.innerHTML = `
-          <div>
-            <span class="font-bold text-slate-800">${d.full_name}</span>
-            <span class="text-[11px] text-slate-500 ml-2">(${d.department})</span>
+          <div class="flex items-center gap-3">
+            <span class="font-mono font-black text-sm bg-slate-900 text-white px-2.5 py-1 rounded-lg">${v.plate}</span>
+            <div>
+              <div class="font-bold text-slate-800">${v.brand_model || 'Şirket Aracı'}</div>
+              <div class="text-[11px] text-slate-500">Son KM: ${v.last_km ? v.last_km.toLocaleString('tr-TR') : '-'}</div>
+            </div>
           </div>
-          ${d.is_temporary ? '<span class="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-semibold border border-amber-200">Vardiya Kaydı</span>' : '<span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">Kadrolu Şoför</span>'}
+          <button onclick="deleteVehicle(${idx})" class="text-slate-400 hover:text-red-600 transition-colors" title="Aracı Kaldır">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
         `;
         container.appendChild(item);
       });
     }
 
-    // Yeni Araç Ekleme
-    async function addNewVehicle() {
-      const plate = document.getElementById('newVehiclePlate').value.trim();
+    function addNewVehicle() {
+      const plate = document.getElementById('newVehiclePlate').value.trim().toUpperCase();
       const brand = document.getElementById('newVehicleBrand').value.trim();
       const km = document.getElementById('newVehicleKm').value;
 
       if (!plate) return alert('Lütfen plaka giriniz.');
 
-      try {
-        const res = await fetch('/api/vehicles', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plate, brand_model: brand, last_km: km })
-        });
-
-        const contentType = res.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Sunucu aktif değil veya yanıt vermiyor. Lütfen Başlat dosyasını çalıştırınız.');
-        }
-
-        const result = await res.json();
-        if (result.success) {
-          alert('Araç başarıyla kaydedildi!');
-          document.getElementById('newVehiclePlate').value = '';
-          document.getElementById('newVehicleBrand').value = '';
-          document.getElementById('newVehicleKm').value = '';
-          await loadVehicles();
-          await loadStats();
-        } else {
-          alert('Hata: ' + result.error);
-        }
-      } catch (err) {
-        alert('Bağlantı Hatası: ' + err.message);
+      if (allVehicles.some(v => v.plate === plate)) {
+        return alert('Bu plaka zaten kayıtlı.');
       }
+
+      allVehicles.push({
+        plate: plate,
+        brand_model: brand || 'Şirket Aracı',
+        last_km: km ? parseInt(km) : 0
+      });
+
+      saveVehicles();
+      renderAll();
+
+      document.getElementById('newVehiclePlate').value = '';
+      document.getElementById('newVehicleBrand').value = '';
+      document.getElementById('newVehicleKm').value = '';
+      alert('Araç başarıyla eklendi.');
     }
 
-    // Sekme Değiştirici
+    function deleteVehicle(idx) {
+      if (!confirm('Bu aracı filodan çıkarmak istediğinize emin misiniz?')) return;
+      allVehicles.splice(idx, 1);
+      saveVehicles();
+      renderAll();
+    }
+
+    function resetDefaultVehicles() {
+      if (!confirm('Araç listesi varsayılana döndürülsün mü?')) return;
+      allVehicles = [...DEFAULT_VEHICLES];
+      saveVehicles();
+      renderAll();
+    }
+
+    // QR KOD KARTLARI ÇİZİMİ (ÇEVRİMDIŞI / OFFLINE)
+    function renderQrCards() {
+      const container = document.getElementById('printArea');
+      if (!container) return;
+      container.innerHTML = '';
+
+      allVehicles.forEach(v => {
+        const card = document.createElement('div');
+        card.className = 'bg-white border-2 border-slate-200 rounded-2xl p-4 text-center flex flex-col items-center justify-between shadow-sm';
+        
+        const qrId = 'qr_canv_' + v.plate.replace(/\s+/g, '');
+        card.innerHTML = `
+          <div class="border-b-2 border-slate-900 w-full pb-2 mb-2">
+            <span class="text-[9px] uppercase font-black tracking-widest text-slate-400 block">ŞİRKET ARACI ÇIKIŞ KODU</span>
+            <h2 class="text-xl font-black font-mono tracking-wider text-slate-900">${v.plate}</h2>
+            <p class="text-[11px] text-slate-500 font-medium">${v.brand_model || ''}</p>
+          </div>
+
+          <div id="${qrId}" class="p-2 bg-white rounded-xl border border-slate-200 my-2 flex items-center justify-center"></div>
+
+          <p class="text-[10px] font-bold text-slate-700 mt-1">📱 Okutunca Mobil Form Açar</p>
+        `;
+
+        container.appendChild(card);
+
+        // QR Üret
+        setTimeout(() => {
+          const el = document.getElementById(qrId);
+          if (el && window.QRCode) {
+            new QRCode(el, {
+              text: `https://gokhankarlitepe.github.io/arac_takip_sistemi/?p=${encodeURIComponent(v.plate)}`,
+              width: 140,
+              height: 140
+            });
+          }
+        }, 50);
+      });
+    }
+
+    // SEKME GEÇİŞLERİ
     function switchTab(tabId) {
       document.getElementById('tripsTab').classList.add('hidden');
-      document.getElementById('archivesTab').classList.add('hidden');
       document.getElementById('qrTab').classList.add('hidden');
       document.getElementById('manageTab').classList.add('hidden');
 
       document.getElementById('tabBtnTrips').className = 'pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-2';
-      document.getElementById('tabBtnArchives').className = 'pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-2';
       document.getElementById('tabBtnQr').className = 'pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-2';
       document.getElementById('tabBtnManage').className = 'pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-2';
 
       document.getElementById(tabId).classList.remove('hidden');
 
       if (tabId === 'tripsTab') document.getElementById('tabBtnTrips').className = 'pb-3 border-b-2 border-blue-600 text-blue-600 flex items-center gap-2';
-      if (tabId === 'archivesTab') {
-        document.getElementById('tabBtnArchives').className = 'pb-3 border-b-2 border-emerald-600 text-emerald-600 flex items-center gap-2';
-        loadArchives();
-      }
       if (tabId === 'qrTab') document.getElementById('tabBtnQr').className = 'pb-3 border-b-2 border-blue-600 text-blue-600 flex items-center gap-2';
       if (tabId === 'manageTab') document.getElementById('tabBtnManage').className = 'pb-3 border-b-2 border-blue-600 text-blue-600 flex items-center gap-2';
-    }
-
-    // Arşivleri Yükle
-    async function loadArchives() {
-      const res = await fetch('/api/sync-logs');
-      const logs = await res.json();
-      const tbody = document.getElementById('archivesTableBody');
-      tbody.innerHTML = '';
-
-      if (logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400">Henüz güvenlikten aktarılan arşiv paketi yok.</td></tr>`;
-        return;
-      }
-
-      logs.forEach(l => {
-        const syncDate = new Date(l.sync_time);
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50 transition-colors';
-        tr.innerHTML = `
-          <td class="p-3.5 font-mono font-bold text-slate-800">${syncDate.toLocaleString('tr-TR')}</td>
-          <td class="p-3.5 font-medium text-slate-700">${l.operator}</td>
-          <td class="p-3.5 font-bold text-emerald-700">${l.trip_count} adet hareket</td>
-          <td class="p-3.5 font-mono text-slate-600">
-            <span class="bg-slate-100 px-2 py-1 rounded text-[11px] font-semibold">${l.archive_folder}</span>
-          </td>
-          <td class="p-3.5">
-            <a href="/isletme_server_arsiv/${l.archive_folder}/${l.excel_file}" download class="text-emerald-700 font-bold hover:underline flex items-center gap-1">
-              <i class="fa-solid fa-file-excel"></i> ${l.excel_file}
-            </a>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // WhatsApp'tan Gelen Excel Dosyasını İçe Aktar
-    async function uploadExcelReport(input) {
-      if (!input.files || !input.files[0]) return;
-      const file = input.files[0];
-
-      const btn = document.getElementById('btnUploadExcel');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Dosya İşleniyor...';
-
-      const formData = new FormData();
-      formData.append('excel_file', file);
-
-      try {
-        const res = await fetch('/api/import-excel', {
-          method: 'POST',
-          body: formData
-        });
-        const result = await res.json();
-
-        if (result.success) {
-          const notice = document.getElementById('importResultNotice');
-          const noticeText = document.getElementById('importResultText');
-          noticeText.innerHTML = `
-            <i class="fa-solid fa-circle-check mr-2 text-emerald-600 text-sm"></i>
-            <strong>${file.name}</strong> başarıyla sisteme aktarıldı! (${result.addedCount} yeni kayıt eklendi, ${result.updatedCount} kayıt güncellendi).
-          `;
-          notice.classList.remove('hidden');
-
-          // Tabloları ve istatistikleri yenile
-          await loadStats();
-          await loadTrips();
-        } else {
-          alert('Excel aktarım hatası: ' + (result.error || 'Bilinmeyen hata'));
-        }
-      } catch (err) {
-        alert('Sunucu hatası: ' + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-file-arrow-up text-base"></i> <span>Excel Dosyası Seç & İçe Aktar</span>';
-        input.value = ''; // Inputu sıfırla
-      }
-    }
-
-    // WhatsApp Yapıştırma Modalı
-    function openPasteModal() {
-      document.getElementById('pasteRawText').value = '';
-      document.getElementById('pasteModal').classList.remove('hidden');
-    }
-    function closePasteModal() {
-      document.getElementById('pasteModal').classList.add('hidden');
-    }
-    async function submitPastedWhatsapp() {
-      const text = document.getElementById('pasteRawText').value;
-      if (!text || !text.trim()) return alert('Lütfen WhatsApp mesajını yapıştırınız.');
-
-      try {
-        const res = await fetch('/api/import-whatsapp-text', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
-        });
-        const result = await res.json();
-        if (result.success) {
-          alert('Başarılı: ' + result.message);
-          closePasteModal();
-          await loadStats();
-          await loadTrips();
-        } else {
-          alert('Hata: ' + result.error);
-        }
-      } catch (e) {
-        alert('Bağlantı hatası: ' + e.message);
-      }
-    }
-
-    // Modal Fotoğraf
-    function openAdminPhoto(src, title) {
-      document.getElementById('adminModalImg').src = src;
-      document.getElementById('adminModalTitle').innerText = title;
-      document.getElementById('adminPhotoModal').classList.remove('hidden');
-    }
-
-    function closeAdminPhotoModal() {
-      document.getElementById('adminPhotoModal').classList.add('hidden');
     }
 
     init();
